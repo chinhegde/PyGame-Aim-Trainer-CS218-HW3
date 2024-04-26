@@ -22,7 +22,8 @@ class Game:
         self.start_time = time.time()
         self.wavetimes = []
         self.circle_count = circle_count
-        self.wave = Wave(circle_count)
+        self.speed = 2  # Initial speed of circles
+        self.wave = Wave(circle_count, self.speed)
 
     def shoot(self):
         # Handles shooting
@@ -53,34 +54,38 @@ class Game:
     def update(self):
         # Reinitializes wave if wave is empty
         if len(self.wave.circles) == 0:
+            self.speed += 1  # Increase speed for each new wave
             wavetime = time.time() - self.wave.start_time
             self.wavetimes.append(wavetime)
-            self.wave.__init__(self.circle_count)
+            self.wave = Wave(self.circle_count, self.speed)
 
 class Wave:
-    def __init__(self, circle_count):
+    def __init__(self, circle_count, speed):
         self.start_time = time.time()
         self.circle_count = circle_count
-        self.circles = [Circle() for x in range(circle_count)]
+        self.circles = [Circle(speed) for x in range(circle_count)]
 
 class Circle:
-    def __init__(self):
+    def __init__(self, speed):
         self.x = random.randint(0, screen.get_width())
         self.y = random.randint(round(screen.get_height()*(1/3)), round(screen.get_height()*(2/3)))
         self.r = screen.get_height()/20
-    
+        self.vx = speed * random.choice([-1, 1])  # Horizontal velocity
+        self.vy = speed * random.choice([-1, 1])  # Vertical velocity
+
+    def update(self):
+        # Update position based on velocity
+        self.x += self.vx
+        self.y += self.vy
+        # Bounce off the edges of the screen
+        if self.x - self.r < 0 or self.x + self.r > screen.get_width():
+            self.vx *= -1
+        if self.y - self.r < 0 or self.y + self.r > screen.get_height():
+            self.vy *= -1
+
     def draw(self):
-        # Circle
         pygame.gfxdraw.aacircle(screen, self.x, self.y, round(self.r), text_color)
         pygame.gfxdraw.filled_circle(screen, self.x, self.y, round(self.r), text_color)
-
-        # Small ellipse (very messy)
-        ellipse_surface = pygame.Surface((round(10*self.r), round(10*self.r)), pygame.SRCALPHA)
-        pygame.gfxdraw.filled_ellipse(ellipse_surface, round(5*self.r), round(2*self.r), round(3*self.r), round(1.8*self.r), text_color_lighter)
-        pygame.gfxdraw.aaellipse(ellipse_surface, round(5*self.r), round(2*self.r), round(3*self.r), round(1.8*self.r), text_color_lighter)
-        ellipse_surface = pygame.transform.rotate(ellipse_surface, 30)
-        ellipse_surface = pygame.transform.scale_by(ellipse_surface, 0.13)
-        screen.blit(ellipse_surface, (round(self.x - self.r), round(self.y - self.r)))
     
 # Variables
 pygame.display.set_caption("Aim Trainer")
@@ -161,6 +166,10 @@ while running:
                 initialized = False
                 break
         
+        # Update each circle's position
+        for circle in game.wave.circles:
+            circle.update()
+
         # Fills screen with background color
         screen.fill(bg_color)
 
