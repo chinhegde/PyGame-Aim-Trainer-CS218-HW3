@@ -1,12 +1,9 @@
 import pygame
-import asyncio
+import pygame.gfxdraw
 import random
 import time
+import asyncio
 from math import sqrt
-
-pygame.init()
-pygame.font.init()
-pygame.mixer.init()
 
 # Classes and functions
 class Game:
@@ -14,7 +11,6 @@ class Game:
         self.round_time = 20
         self.hit_counter = 0
         self.start_time = time.time()
-        self.wavetimes = []
         self.circle_count = circle_count
         self.game_mode = game_mode
         if game_mode == 'moving':
@@ -27,34 +23,29 @@ class Game:
         for circle in self.wave.circles:
             if sqrt((circle.x - mouse_x)**2 + (circle.y - mouse_y)**2) < circle.r:
                 self.wave.circles.remove(circle)
-                shot_sound.stop()
-                shot_sound.play()
                 self.hit_counter += 1
+                break
 
     def draw(self):
         for circle in self.wave.circles:
             circle.draw()
-        timer_text = font.render(str(round(self.round_time - (time.time() - self.start_time))), True, text_color)
-        timer_rect = timer_text.get_rect(center=(screen.get_width()/2, 0))
-        screen.blit(timer_text, (timer_rect[0], timer_rect[1] + timer_rect.height/2))
 
     def update(self):
         if len(self.wave.circles) == 0:
-            self.speed += 1 if self.game_mode == 'moving' else 0
+            self.speed += 1  # Increase speed for each new wave if moving
             self.wave = Wave(self.circle_count, self.speed)
 
 class Wave:
     def __init__(self, circle_count, speed):
-        self.circle_count = circle_count
-        self.circles = [Circle(speed) for _ in range(circle_count)]
+        self.circles = [Circle(speed) for x in range(circle_count)]
 
 class Circle:
     def __init__(self, speed):
         self.x = random.randint(0, screen.get_width())
         self.y = random.randint(round(screen.get_height()*(1/3)), round(screen.get_height()*(2/3)))
         self.r = screen.get_height()/20
-        self.vx = speed * random.choice([-1, 1])
-        self.vy = speed * random.choice([-1, 1])
+        self.vx = speed * random.choice([-1, 1])  # Horizontal velocity
+        self.vy = speed * random.choice([-1, 1])  # Vertical velocity
 
     def update(self):
         self.x += self.vx
@@ -65,17 +56,23 @@ class Circle:
             self.vy *= -1
 
     def draw(self):
-        pygame.draw.circle(screen, text_color, (self.x, self.y), self.r)
+        pygame.gfxdraw.aacircle(screen, self.x, self.y, round(self.r), text_color)
+        pygame.gfxdraw.filled_circle(screen, self.x, self.y, round(self.r), text_color)
 
 # Variables
 pygame.display.set_caption("Aim Trainer")
-screen = pygame.display.set_mode((1000,500), pygame.RESIZABLE)
+screen = pygame.display.set_mode((1000, 500), pygame.RESIZABLE)
 clock = pygame.time.Clock()
-font = pygame.font.SysFont("Arial", round(screen.get_height()/20))
+base_font_name = "Arial"
+title_font = pygame.font.Font("Fredoka-Bold.ttf", size=round(screen.get_height()/10))
+font = pygame.font.Font("Fredoka-Bold.ttf", size=round(screen.get_height()/20))
 shot_sound = pygame.mixer.Sound("shot.wav")
 bg_color = pygame.Color(170, 238, 187)
 text_color = pygame.Color(85, 130, 139)
+text_color_lighter = pygame.Color(159, 200, 208)
+pygame.mouse.set_cursor(pygame.cursors.broken_x)
 
+# Main function
 async def main():
     running = True
     initialized = False
@@ -84,9 +81,15 @@ async def main():
         if not initialized:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             screen.fill(bg_color)
-            start_text = font.render("Click to start", True, text_color)
-            text_rect = start_text.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
-            screen.blit(start_text, text_rect)
+            title_text = title_font.render("Aim Trainer", True, text_color)
+            title_text_rect = title_text.get_rect(center=(screen.get_width()/2, screen.get_height()/4))
+            screen.blit(title_text, title_text_rect)
+            start_text_left = font.render("Click this side for static targets", True, text_color)
+            start_text_left_rect = start_text_left.get_rect(center=(screen.get_width()/4, screen.get_height()/2))
+            screen.blit(start_text_left, start_text_left_rect)
+            start_text_right = font.render("Click this side for moving targets", True, text_color)
+            start_text_right_rect = start_text_right.get_rect(center=(screen.get_width()*(3/4), screen.get_height()/2))
+            screen.blit(start_text_right, start_text_right_rect)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -115,4 +118,5 @@ async def main():
                 initialized = False
             await asyncio.sleep(0.01)
 
+# Run the main function
 asyncio.run(main())
